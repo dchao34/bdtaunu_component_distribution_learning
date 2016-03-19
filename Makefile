@@ -1,4 +1,4 @@
-BBRKDE_ROOT = /home/dchao/workspace/analyses/2016/March18/kde_grid_search/bbrcit_kde
+BBRKDE_ROOT = 
 
 all : 
 	$(MAKE) -C $(BBRKDE_ROOT)/grid_search

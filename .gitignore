@@ -1,3 +1,4 @@
 bbrcit_kde
 *.csv
 *.out
+*.o
