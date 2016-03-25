@@ -16,14 +16,14 @@ print 'Will launch the following event types: {0}'.format(args.evttypes)
 print 'Skipping cross validation: {0}\n'.format(args.skip_cross_validation)
 
 print 'To monitor the results, use the following command in the shell: '
-print '  tail -f evttype[i].out\n'
+print '  tail -f adapted_evttype[i].out\n'
 
 for evttype in args.evttypes:
 
   print 'Processing evttype{0}.'.format(evttype)
 
-  out_fname = 'evttype{0}.out'.format(evttype)
-  cfg_fname = 'evttype{0}.cfg'.format(evttype)
+  out_fname = 'adapted_evttype{0}.out'.format(evttype)
+  cfg_fname = 'adapted_evttype{0}.cfg'.format(evttype)
   with open(out_fname, 'w') as f: 
     subprocess.check_call(
         ['./grid_search', 
