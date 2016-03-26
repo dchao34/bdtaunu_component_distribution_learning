@@ -3,3 +3,4 @@ bbrcit_kde
 *.out
 *.o
 *.pyc
+.ipynb_checkpoints
