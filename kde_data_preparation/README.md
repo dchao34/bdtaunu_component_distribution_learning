@@ -1,25 +1,25 @@
 Data preparation
 ----------------
 
-1. Download data from database using `download_generic.sql`. 
-   + Output: `generic.csv`. 
+1. Download training data from database using `download_train_data.sql`. 
+   + Output: `generic.train.csv`. 
 
-2. Partition training/testing set. 
-   + Program: `split_ml_samples.cc`. Divides the input into training and testing. 
+2. Partition all training data data into kernel density bandwidth and sensitivity training sets. 
+   + Program: `split_ml_samples.cc`. 
 
-       The testing set consists of a fixed fraction of the total sample as well 
+       The sensitivity training set consists of a fixed fraction of the total sample as well 
        as a factor to accept/reject the correct proportion of event mixtures 
        based on the event weight. 
 
-       The remaing events go into the training set. 
+       The remaing events go into the bandwidth training set. 
 
-   + Input: `generic.csv`. 
-   + Output: `generic.train.csv` and `generic.test.csv`. 
+   + Input: `generic.train.csv`. 
+   + Output: `bw.train.csv` and `alpha.train.csv`. 
 
-3. Training data preparation. 
+3. Bandwidth training data preparation. 
    + Program: `prepare_training_data_format.cc`. 
 
-       Prepares the training data into a format suitable for 
+       Prepares the badwidth training data into a format suitable for 
        density estimation. It separates out those events belonging to a 
        certain category (`t`) and dithers the features or down samples 
        it if requested. 

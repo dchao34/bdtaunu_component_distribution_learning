@@ -6,25 +6,26 @@
 
 int main(int argc, char **argv) {
 
-  std::string data_in_fname("generic.csv");
-  std::string train_out_fname("generic.train.csv");
-  std::string test_out_fname("generic.test.csv");
-  double test_proportion = 0.714;
+  std::string in_fname("generic.train.csv");
+  std::string train_bw_out_fname("bw.train.csv");
+  std::string train_alpha_out_fname("alpha.train.csv");
+  double scale = 1.0;
 
-  std::ofstream train_fout(train_out_fname);
-  std::ofstream test_fout(test_out_fname);
-  NumericCsvReader reader(data_in_fname);
+  std::ofstream train_bw_fout(train_bw_out_fname);
+  std::ofstream train_alpha_fout(train_alpha_out_fname);
+  NumericCsvReader reader(in_fname);
 
-  train_fout << reader.title() << std::endl;
-  test_fout << reader.title() << std::endl;
+  train_bw_fout << reader.title() << std::endl;
+  train_alpha_fout << reader.title() << std::endl;
 
-  std::mt19937 e;
+  std::random_device rd;
+  std::mt19937 e(rd());
   std::uniform_real_distribution<> d;
   while (reader.getline()) {
-    if (d(e) < reader["event_weight"] * test_proportion) {
-      test_fout << reader.curr_line() << std::endl;
+    if (d(e) < reader["event_weight"] * scale) {
+      train_alpha_fout << reader.curr_line() << std::endl;
     } else {
-      train_fout << reader.curr_line() << std::endl;
+      train_bw_fout << reader.curr_line() << std::endl;
     }
   }
 

@@ -35,10 +35,11 @@ int main(int argc, char **argv) {
 
   double dither_precision = 1e-3;
 
-  std::string in_fname("generic.train.csv");
+  std::string in_fname("bw.train.csv");
   std::string out_fname = "evttype" + std::to_string(mc_evttype) + ".train.csv";
 
-  std::mt19937 e;
+  std::random_device rd;
+  std::mt19937 e(rd());
   std::uniform_real_distribution<> d, d_dith(-0.5, 0.5);
 
   NumericCsvReader reader(in_fname);

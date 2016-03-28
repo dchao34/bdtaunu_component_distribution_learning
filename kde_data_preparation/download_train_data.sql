@@ -25,7 +25,7 @@ FROM E INNER JOIN C USING (eid)
 WHERE
     bad=0 AND
     data_source>1 AND 
-    ml_sample=-1
+    ml_sample=5
 ;
 
-\copy (SELECT * FROM F) TO 'generic.csv' WITH CSV HEADER;
+\copy (SELECT * FROM F) TO 'generic.train.csv' WITH CSV HEADER;

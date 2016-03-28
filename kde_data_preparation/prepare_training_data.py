@@ -12,15 +12,15 @@ subprocess.check_call(
 
 print 'preparing training data for evttype 3'
 subprocess.check_call(
-    ['./prepare_training_data_format', '3', '1', '0.14']
+    ['./prepare_training_data_format', '3', '1', '0.19']
 )
 
 print 'preparing training data for evttype 4'
 subprocess.check_call(
-    ['./prepare_training_data_format', '4', '1', '0.72']
+    ['./prepare_training_data_format', '4', '1', '1.0']
 )
 
 print 'preparing training data for evttype 5'
 subprocess.check_call(
-    ['./prepare_training_data_format', '5', '1', '0.25']
+    ['./prepare_training_data_format', '5', '1', '0.46']
 )
