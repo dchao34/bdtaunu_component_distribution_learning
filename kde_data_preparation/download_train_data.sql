@@ -28,4 +28,4 @@ WHERE
     ml_sample=5
 ;
 
-\copy (SELECT * FROM F) TO 'generic.train.csv' WITH CSV HEADER;
+\copy (SELECT * FROM F) TO 'downloaded.train.csv' WITH CSV HEADER;

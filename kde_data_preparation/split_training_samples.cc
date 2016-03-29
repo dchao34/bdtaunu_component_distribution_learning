@@ -6,9 +6,9 @@
 
 int main(int argc, char **argv) {
 
-  std::string in_fname("generic.train.csv");
-  std::string train_bw_out_fname("bw.train.csv");
-  std::string train_alpha_out_fname("alpha.train.csv");
+  std::string in_fname("downloaded.train.csv");
+  std::string train_bw_out_fname("downloaded.bw.train.csv");
+  std::string train_alpha_out_fname("downloaded.alpha.train.csv");
   double scale = 1.0;
 
   std::ofstream train_bw_fout(train_bw_out_fname);

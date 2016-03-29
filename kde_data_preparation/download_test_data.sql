@@ -28,4 +28,4 @@ WHERE
     ml_sample=6
 ;
 
-\copy (SELECT * FROM F) TO 'generic.test.csv' WITH CSV HEADER;
+\copy (SELECT * FROM F) TO 'downloaded.test.csv' WITH CSV HEADER;
