@@ -3,8 +3,8 @@
 + Fit component distribution learning using kernel densities. 
   
 + The fit components correspond to the following event types:
-  1. $$B\rightarrow D\tau$$ 
-  2. $$B\rightarrow D^\*\tau$$ 
+  1. $B\rightarrow D\tau$
+  2. $B\rightarrow D^\*\tau$
   3. Semileptonic. 
   4. Hadronic. 
   5. Continuum. 

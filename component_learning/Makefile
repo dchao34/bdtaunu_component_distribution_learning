@@ -1,4 +1,4 @@
-BBRKDE_ROOT = 
+BBRKDE_ROOT = ../../bbrcit_kde
 
 all : 
 	$(MAKE) -C $(BBRKDE_ROOT)/grid_search
