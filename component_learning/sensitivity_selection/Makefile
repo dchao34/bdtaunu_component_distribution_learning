@@ -1,4 +1,4 @@
-BINARIES = score
+BINARIES = evaluate_component_densities
 
 OBJECTS = custom_program_option_utils.o
 
@@ -35,7 +35,7 @@ NVCCMAKEDEP = @$(NVCC) -M -MT $@ $(NVCCFLAGS) $(INCFLAGS) $< -o\
 
 all : $(BINARIES)
 
-score : $(addprefix $(BUILDDIR)/, score.o $(OBJECTS))
+evaluate_component_densities : $(addprefix $(BUILDDIR)/, evaluate_component_densities.o $(OBJECTS))
 	$(CXX) $(LDFLAGS) $^ -o $@
 
 $(BUILDDIR)/%.o : %.cpp
