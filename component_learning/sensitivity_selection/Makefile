@@ -1,6 +1,6 @@
 BINARIES = score
 
-OBJECTS = 
+OBJECTS = custom_program_option_utils.o
 
 SRCS = $(wildcard *.cc *.cpp)
 
@@ -40,7 +40,7 @@ score : $(addprefix $(BUILDDIR)/, score.o $(OBJECTS))
 
 $(BUILDDIR)/%.o : %.cpp
 $(BUILDDIR)/%.o : %.cpp $(DEPDIR)/%.d
-	$(CXX) $(DEPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(DEPFLAGS) $(CXXFLAGS) $(INCFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
 $(BUILDDIR)/%.o : %.cc

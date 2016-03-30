@@ -6,245 +6,347 @@
 
 #include <KernelDensity.h>
 
+#include <boost/program_options.hpp>
+
+#include "custom_program_option_utils.h"
+#include "sensitivity_utils.h"
+
+namespace po = boost::program_options;
+
 namespace {
   using KernelType = bbrcit::EpanechnikovProductKernel2d<float>;
   using KernelDensityType = bbrcit::KernelDensity<2,KernelType,double>;
+  using KdtreeType = KernelDensityType::KdtreeType;
   using DataPointType = KernelDensityType::DataPointType;
-  double rel_tol = 1e-6;
-  double abs_tol = 1e-8;
 }
 
-template<typename PointT>
-std::vector<PointT> read_data2d(const std::string &fname) {
-  std::vector<PointT> points;
-  std::ifstream fin(fname);
-  double x, y, w;
-  while (fin >> x >> y >> w) {
-    points.push_back({{x, y}, {w}});
-  }
-  return points;
-}
-
-KernelDensityType::KdtreeType
-construct_query_tree(const std::string fname, int leaf_max) {
-  std::vector<DataPointType> points = 
-    read_data2d<DataPointType>(fname);
-  KernelDensityType::KdtreeType qtree(std::move(points), leaf_max);
+// construct a query tree using data in `fname` 
+KdtreeType construct_query_tree(const std::string fname, int leaf_max) {
+  std::vector<DataPointType> points = read_2dpoints<DataPointType>(fname);
+  KdtreeType qtree(std::move(points), leaf_max);
   return qtree;
 }
 
-KernelDensityType
-construct_kernel_density(
-    const std::string fname, int leaf_max, 
-    double pilot_bandwidth_x, double pilot_bandwidth_y, 
-    double adapt_bandwidth_x, double adapt_bandwidth_y, 
-    double alpha, int block_size) {
-  std::vector<DataPointType> points = 
-    read_data2d<DataPointType>(fname);
+// construct (adapted) kernel density using data in `fname`
+KernelDensityType construct_kernel_density(
+  const std::string fname, double alpha, 
+  double pilot_bandwidth_x, double pilot_bandwidth_y, 
+  double adapt_bandwidth_x, double adapt_bandwidth_y, 
+  double rel_tol, double abs_tol, 
+  int leaf_max, int block_size) {
+
+  std::vector<DataPointType> points = read_2dpoints<DataPointType>(fname);
 
   KernelDensityType kde(std::move(points), leaf_max);
   kde.kernel().set_bandwidths(pilot_bandwidth_x, pilot_bandwidth_y);
   kde.adapt_density(alpha, rel_tol, abs_tol, block_size);
   kde.kernel().set_bandwidths(adapt_bandwidth_x, adapt_bandwidth_y);
+
   return kde;
 }
 
-template <int D> 
-class PointEvalResults {
+// class whose objects store evaluation result of 
+// the kernel density components. 
+class EvalResults {
 
   public: 
-    static constexpr int dim() { return D; }
 
+    // write the contents to output stream
     friend std::ostream& operator<<(
-        std::ostream &os, const PointEvalResults<D> &p) {
-      for (size_t i = 0; i < D; ++i) { 
-        os << p[i] << " ";
+        std::ostream &os, const EvalResults &r) {
+      for (size_t i = 0; i < r.m(); ++i) { 
+        for (size_t j = 0; j < r.n(); ++j) { 
+          os << r[i][j] << " ";
+        }
+        os << std::endl;
       }
       return os;
     }
 
   public: 
-    PointEvalResults() : eval_(D, 0.0) {}
-    PointEvalResults(const PointEvalResults<D>&) = default;
-    PointEvalResults(PointEvalResults<D>&&) = default;
-    ~PointEvalResults() = default;
-    PointEvalResults& operator=(const PointEvalResults<D>&) = default;
-    PointEvalResults& operator=(PointEvalResults<D>&&) = default;
+    EvalResults() : m_(0), n_(0), results_() {}
+    EvalResults(size_t m, size_t n) : 
+      m_(m), n_(n), results_(m, std::vector<double>(n, 0.0)) {};
 
-    const double& operator[](size_t i) const {
-      return eval_.at(i);
+    EvalResults(const EvalResults&) = default;
+    EvalResults(EvalResults&&) = default;
+    ~EvalResults() = default;
+    EvalResults& operator=(const EvalResults&) = default;
+    EvalResults& operator=(EvalResults&&) = default;
+
+    // get the dimensions.
+    size_t m() const { return m_; }
+    size_t n() const { return n_; }
+
+    // get a reference to the `i`th row. 
+    const std::vector<double>& operator[](size_t i) const {
+      return results_[i];
     }
-    double& operator[](size_t i) {
-      return const_cast<double&>(
-          static_cast<const PointEvalResults<D>&>(*this)[i]);
+    std::vector<double>& operator[](size_t i) {
+      return const_cast<std::vector<double>&>(
+          static_cast<const EvalResults&>(*this)[i]);
+    }
+
+    // copy the evaluation results of PointT objects in `source` 
+    // into the `j`th column. 
+    template<typename PointT> 
+    void write_column(size_t j, const std::vector<PointT> &source) {
+      if (source.size() != m_) { 
+        throw std::range_error(
+            "EvalResults::write_column(...): source vector should have "
+            "the same length as the column of `this` result matrix. ");
+      }
+
+      for (size_t i = 0; i < m_; ++i) { 
+        results_[i][j] = source[i].attributes().value();
+      }
+
     }
 
   private:
-    std::vector<double> eval_;
+    size_t m_, n_;
+    std::vector<std::vector<double>> results_;
 };
 
-template<int D>
-void copy_results(
-    const KernelDensityType::KdtreeType &qtree, 
-    std::vector<PointEvalResults<D>> &results, 
-    size_t c) {
 
-  if (qtree.size() != results.size()) {
-    throw std::out_of_range(
-        "result vector should have length equivalent "
-        "to the number of points in the query tree. ");
+// main routine. 
+void evaluate(const po::variables_map &vm);
+
+
+int main(int argc, char **argv) {
+
+  try {
+    // define program options
+    po::options_description generic("Generic options");
+    generic.add_options()
+        ("help,h", "produce help message")
+    ;
+
+    po::options_description config("Configuration options");
+    config.add_options()
+
+        ("max_leaf_size", po::value<int>(), "maximum leaf size in Kdtree. ")
+        ("rel_tol", po::value<double>(), "relative tolerance for kde evaluations. ")
+        ("abs_tol", po::value<double>(), "absolute tolerance for kde evaluations. ")
+        ("cuda_device_number", po::value<int>(), "cuda device used for this session. ")
+        ("gpu_block_size", po::value<int>(), "gpu block size. ")
+
+        ("input_data_dir", po::value<std::string>(), "directory to the input data. ")
+        ("input_sample_fname", po::value<std::string>(), "input path to the data sample. ")
+        ("input_component_fnames", po::value<std::string>(), "input paths to the components. ")
+        ("out_fname", po::value<std::string>(), "output file name. ")
+
+        ("alphas", po::value<std::string>(), "sensitivity parameters. ")
+        ("pilot_bwxs", po::value<std::string>(), "pilot bandwidths in x. ")
+        ("pilot_bwys", po::value<std::string>(), "pilot bandwidths in y. ")
+        ("adapt_bwxs", po::value<std::string>(), "evaluation bandwidths in x. ")
+        ("adapt_bwys", po::value<std::string>(), "evaluation bandwidths in y. ")
+    ;
+
+    po::options_description hidden("Hidden options");
+    hidden.add_options()
+        ("config_file", po::value<std::string>(), "name of a configuration file. ")
+    ;
+
+    po::options_description cmdline_options;
+    cmdline_options.add(generic).add(config).add(hidden);
+
+    po::options_description config_file_options;
+    config_file_options.add(config);
+
+    po::options_description visible;
+    visible.add(generic).add(config);
+
+    po::positional_options_description p;
+    p.add("config_file", -1);
+
+    // parse program options and configuration file
+    po::variables_map vm;
+    store(po::command_line_parser(argc, argv).
+          options(cmdline_options).positional(p).run(), vm);
+    notify(vm);
+
+    if (vm.count("help") || !vm.count("config_file")) {
+      std::cout << std::endl;
+      std::cout << "Usage: prepare_data_format [options] config_fname" << std::endl;
+      std::cout << visible << "\n";
+      return 0;
+    }
+
+    std::ifstream fin(vm["config_file"].as<std::string>());
+    if (!fin) {
+      std::cout << "cannot open config file: ";
+      std::cout << vm["config_file"].as<std::string>() << std::endl;
+      return 0;
+    }
+
+    store(parse_config_file(fin, config_file_options), vm);
+    notify(vm);
+
+    // begin evaluation
+    evaluate(vm);
+
+  } catch(std::exception& e) {
+
+    std::cerr << "error: " << e.what() << "\n";
+    return 1;
+
+  } catch(...) {
+
+    std::cerr << "Exception of unknown type!\n";
+    return 1;
   }
 
-  for (size_t i = 0; i < results.size(); ++i) {
-    results[i][c] = qtree.points()[i].attributes().value();
-  }
-
+  return 0;
 }
 
 
-int main() {
 
+// main evaluation routine
+void evaluate(const po::variables_map &vm) {
+
+  // 1. setup general utilities
+
+  // timers
   std::chrono::high_resolution_clock::time_point start_total, end_total;
   std::chrono::duration<double> elapsed_total;
-
   start_total = std::chrono::high_resolution_clock::now();
 
   std::chrono::high_resolution_clock::time_point start, end;
-  std::chrono::duration<double, std::milli> elapsed;
+  std::chrono::duration<double> elapsed;
 
-  int leaf_max = 32768;
-  int block_size = 128;
-  double alpha = 0.5;
+  // performance parameters
+  int max_leaf_size = vm["max_leaf_size"].as<int>();
+  double rel_tol = vm["rel_tol"].as<double>();
+  double abs_tol = vm["abs_tol"].as<double>();
 
-  std::cout << "+ building query tree. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType::KdtreeType qtree = 
-    construct_query_tree("data/alpha.train.csv", leaf_max);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+  std::cout << "+ performance parameters: \n" << std::endl;
 
+  std::cout << "  max leaf size: " << max_leaf_size << std::endl;
+  std::cout << "  relative tolerance: " << rel_tol << std::endl;
+  std::cout << "  absolute tolerance: " << abs_tol << std::endl;
+  std::cout << std::endl;
 
+#ifdef __CUDACC__
+  int cuda_device_number = vm["cuda_device_number"].as<int>();
+  cudaSetDevice(cuda_device_number);
+  cudaDeviceProp deviceProp;
+  cudaGetDeviceProperties(&deviceProp, cuda_device_number);
+  std::cout << "  gpu device number used for this session: ";
+  std::cout << cuda_device_number << "\n";
+  std::cout << "  device name: " << deviceProp.name << std::endl;
 
-  std::vector<PointEvalResults<5>> eval_results(qtree.size());
-
-  std::cout << "+ building evttype1 kde. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType kde1 = 
-    construct_kernel_density(
-        "data/evttype1.bw.train.csv", leaf_max, 
-        0.003, 0.036, 0.0032, 0.068, alpha, block_size);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-  std::cout << "+ evaluating evttype1 kde over queries. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  kde1.eval(qtree, rel_tol, abs_tol, block_size);
-  copy_results(qtree, eval_results, 0);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+  int gpu_block_size = vm["gpu_block_size"].as<int>();
+  std::cout << "  gpu block size: " << gpu_block_size << std::endl;
+  std::cout << std::endl;
+#endif
 
 
-
-
-  std::cout << "+ building evttype2 kde. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType kde2 = 
-    construct_kernel_density(
-        "data/evttype2.bw.train.csv", leaf_max, 
-        0.0032, 0.03, 0.0023, 0.055, alpha, block_size);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-  std::cout << "+ evaluating evttype2 kde over queries. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  kde2.eval(qtree, rel_tol, abs_tol, block_size);
-  copy_results(qtree, eval_results, 1);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-
-
-
-  std::cout << "+ building evttype3 kde. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType kde3 = 
-    construct_kernel_density(
-        "data/evttype3.bw.train.csv", leaf_max, 
-        0.00048, 0.03, 0.000518, 0.055, alpha, block_size);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-  std::cout << "+ evaluating evttype3 kde over queries. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  kde3.eval(qtree, rel_tol, abs_tol, block_size);
-  copy_results(qtree, eval_results, 2);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-
-
-
-
-  std::cout << "+ building evttype4 kde. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType kde4 = 
-    construct_kernel_density(
-        "data/evttype4.bw.train.csv", leaf_max, 
-        0.00041, 0.025, 0.00032, 0.048, alpha, block_size);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-  std::cout << "+ evaluating evttype4 kde over queries. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  kde4.eval(qtree, rel_tol, abs_tol, block_size);
-  copy_results(qtree, eval_results, 3);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-
-
-
-
-  std::cout << "+ building evttype5 kde. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  KernelDensityType kde5 = 
-    construct_kernel_density(
-        "data/evttype5.bw.train.csv", leaf_max, 
-        0.00005, 0.025, 0.000028, 0.055, alpha, block_size);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-  std::cout << "+ evaluating evttype5 kde over queries. " << std::endl;
-  start = std::chrono::high_resolution_clock::now();
-  kde5.eval(qtree, rel_tol, abs_tol, block_size);
-  copy_results(qtree, eval_results, 4);
-  end = std::chrono::high_resolution_clock::now();
-  elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
-
-
-
-
-  std::cout << "+ writing results. \n" << std::endl;
-  std::ofstream fout("results.csv");
-  for (size_t i = 0; i < eval_results.size(); ++i) {
-    fout << eval_results[i] << std::endl;
+  // 2. construct sample point query tree
+  std::string input_data_dir = vm["input_data_dir"].as<std::string>();
+  std::string input_sample_fname = vm["input_sample_fname"].as<std::string>();
+  if (!input_data_dir.empty()) { 
+    input_sample_fname = input_data_dir + "/" + input_sample_fname; 
   }
 
+  std::cout << "+ constructing sample query tree with file: ";
+  std::cout << input_sample_fname << std::endl;
 
+  start = std::chrono::high_resolution_clock::now();
+  KdtreeType qtree = 
+    construct_query_tree(input_sample_fname, max_leaf_size);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start; 
+  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+
+
+  // 3. evaluate sample points 
+
+  std::cout << "+ evaluate kernel density components over sample points. \n" << std::endl;
+    
+  // read in kde component configurations
+  std::vector<std::string> input_component_fnames = 
+    tokenize<std::string>(vm["input_component_fnames"].as<std::string>());
+  std::vector<double> alphas = 
+    tokenize<double>(vm["alphas"].as<std::string>());
+  std::vector<double> pilot_bwxs = 
+    tokenize<double>(vm["pilot_bwxs"].as<std::string>());
+  std::vector<double> pilot_bwys = 
+    tokenize<double>(vm["pilot_bwys"].as<std::string>());
+  std::vector<double> adapt_bwxs = 
+    tokenize<double>(vm["adapt_bwxs"].as<std::string>());
+  std::vector<double> adapt_bwys = 
+    tokenize<double>(vm["adapt_bwys"].as<std::string>());
+
+  int n_components = input_component_fnames.size();
+
+  for (int i = 0; i < n_components; ++i) {
+    if (!input_data_dir.empty()) { 
+      input_component_fnames[i] = input_data_dir + "/" + input_component_fnames[i];
+    }
+  }
+
+  if (
+      (alphas.size() != n_components) ||
+      (pilot_bwxs.size() != n_components) ||
+      (pilot_bwys.size() != n_components) ||
+      (adapt_bwxs.size() != n_components) ||
+      (adapt_bwys.size() != n_components)) {
+    throw std::invalid_argument(
+        "evaluate(): must have same number of " 
+        "adaptive kernel parameters as there are kernels. ");
+  }
+
+  std::cout << "  will perform evaluation for the following components: \n" << std::endl;
+  for (int i = 0; i < n_components; ++i) {
+    std::cout << "  component " << i << ":" << std::endl;
+    std::cout << "  file name: " << input_component_fnames[i] << std::endl;
+    std::cout << "  alpha: " << alphas[i] << std::endl;
+    std::cout << "  pilot bandwidths (x, y): " << pilot_bwxs[i] << ", " << pilot_bwys[i] << std::endl;
+    std::cout << "  adaptive bandwidths (x, y): " << adapt_bwxs[i] << ", " << adapt_bwys[i] << std::endl;
+    std::cout << std::endl;
+  }
+
+  // evaluation
+  EvalResults results(qtree.size(), n_components);
+  for (int j = 0; j < n_components; ++j) {
+
+    // construct kernel density
+    std::cout << "+ building kernel density for component " << j;
+    std::cout << " using file: " << input_component_fnames[j] << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    KernelDensityType kde = 
+      construct_kernel_density(
+          input_component_fnames[j], alphas[j], 
+          pilot_bwxs[j], pilot_bwys[j], 
+          adapt_bwxs[j], adapt_bwys[j], 
+          rel_tol, abs_tol, max_leaf_size, gpu_block_size);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = end - start; 
+    std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+
+    // evaluate kernel density
+    std::cout << "  evaluating over query samples for component " << j << std::endl;
+    start = std::chrono::high_resolution_clock::now();
+    kde.eval(qtree, rel_tol, abs_tol, gpu_block_size);
+    end = std::chrono::high_resolution_clock::now();
+    elapsed = end - start; 
+    std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+
+    // save results
+    results.write_column(j, qtree.points());
+
+  }
+
+  // 4. write results to file
+  std::string out_fname = vm["out_fname"].as<std::string>();
+  std::cout << "+ writing results to file: " << out_fname << "\n" << std::endl;
+  std::ofstream fout(out_fname);
+  fout << results;
+
+  // 5. done
   end_total = std::chrono::high_resolution_clock::now();
   elapsed_total = end_total - start_total;
-  std::cout << "=> total running time: " << elapsed_total.count() << " s. \n" << std::endl;
+  std::cout << "+ total runtime: " << elapsed_total.count() << " s.\n" << std::endl;
 
-  return 0;
 }
