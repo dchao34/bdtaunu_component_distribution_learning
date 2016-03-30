@@ -32,3 +32,9 @@ std::vector<PointT> read_2dpoints(const std::string &fname) {
 
 }
 
+template<typename PointT>
+bool ReverseExactLexicoLess(const PointT &lhs, const PointT &rhs) {
+  int i = 0; while (i < lhs.dim() && lhs[lhs.dim()-i-1] == rhs[lhs.dim()-i-1]) { ++i; }
+  return i != lhs.dim() && lhs[lhs.dim()-i-1] < rhs[lhs.dim()-i-1];
+}
+

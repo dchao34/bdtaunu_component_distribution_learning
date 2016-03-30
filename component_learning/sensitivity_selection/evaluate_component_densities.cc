@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <algorithm>
 
 #include <KernelDensity.h>
 
@@ -90,11 +91,18 @@ class EvalResults {
     // copy the evaluation results of PointT objects in `source` 
     // into the `j`th column. 
     template<typename PointT> 
-    void write_column(size_t j, const std::vector<PointT> &source) {
+    void write_column(size_t j, std::vector<PointT> source, 
+                      bool sort_rows) {
       if (source.size() != m_) { 
         throw std::range_error(
             "EvalResults::write_column(...): source vector should have "
             "the same length as the column of `this` result matrix. ");
+      }
+
+      // sort the output by point coordinates. required to keep row ordering 
+      // across separate invocations of `main()`. 
+      if (sort_rows) {
+        std::sort(source.begin(), source.end(), ReverseExactLexicoLess<PointT>);
       }
 
       for (size_t i = 0; i < m_; ++i) { 
@@ -135,6 +143,9 @@ int main(int argc, char **argv) {
         ("input_sample_fname", po::value<std::string>(), "input path to the data sample. ")
         ("input_component_fnames", po::value<std::string>(), "input paths to the components. ")
         ("out_fname", po::value<std::string>(), "output file name. ")
+        ("sort_rows", po::value<bool>(), "if true, sort output by point coordinates. "
+                                         "this is required if row ordering should be "
+                                         "the same across separate invocations. ")
 
         ("alphas", po::value<std::string>(), "sensitivity parameters. ")
         ("pilot_bwxs", po::value<std::string>(), "pilot bandwidths in x. ")
@@ -257,7 +268,7 @@ void evaluate(const po::variables_map &vm) {
     construct_query_tree(input_sample_fname, max_leaf_size);
   end = std::chrono::high_resolution_clock::now();
   elapsed = end - start; 
-  std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+  std::cout << "  running time: " << elapsed.count() << " s. \n" << std::endl;
 
 
   // 3. evaluate sample points 
@@ -277,6 +288,8 @@ void evaluate(const po::variables_map &vm) {
     tokenize<double>(vm["adapt_bwxs"].as<std::string>());
   std::vector<double> adapt_bwys = 
     tokenize<double>(vm["adapt_bwys"].as<std::string>());
+
+  bool sort_rows = vm["sort_rows"].as<bool>();
 
   int n_components = input_component_fnames.size();
 
@@ -307,6 +320,9 @@ void evaluate(const po::variables_map &vm) {
     std::cout << std::endl;
   }
 
+  std::cout << "  sort output rows by point coordinates: ";
+  std::cout << (sort_rows ? "true" : "false") << "\n" << std::endl;
+
   // evaluation
   EvalResults results(qtree.size(), n_components);
   for (int j = 0; j < n_components; ++j) {
@@ -323,7 +339,7 @@ void evaluate(const po::variables_map &vm) {
           rel_tol, abs_tol, max_leaf_size, gpu_block_size);
     end = std::chrono::high_resolution_clock::now();
     elapsed = end - start; 
-    std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+    std::cout << "  running time: " << elapsed.count() << " s. \n" << std::endl;
 
     // evaluate kernel density
     std::cout << "  evaluating over query samples for component " << j << std::endl;
@@ -331,10 +347,10 @@ void evaluate(const po::variables_map &vm) {
     kde.eval(qtree, rel_tol, abs_tol, gpu_block_size);
     end = std::chrono::high_resolution_clock::now();
     elapsed = end - start; 
-    std::cout << "  running time: " << elapsed.count() << " ms. \n" << std::endl;
+    std::cout << "  running time: " << elapsed.count() << " s. \n" << std::endl;
 
     // save results
-    results.write_column(j, qtree.points());
+    results.write_column(j, qtree.points(), sort_rows);
 
   }
 

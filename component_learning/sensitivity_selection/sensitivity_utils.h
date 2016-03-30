@@ -12,6 +12,10 @@
 template<typename PointT>
 std::vector<PointT> read_2dpoints(const std::string &fname);
 
+// returns true if lhs < rhs reverse lexicographically
+template<typename PointT>
+bool ReverseExactLexicoLess(const PointT &lhs, const PointT &rhs);
+
 
 #include "sensitivity_utils_impl.h"
 
