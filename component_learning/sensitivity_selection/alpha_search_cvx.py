@@ -15,6 +15,8 @@ if __name__ == '__main__':
                         help='scale factor to apply to objective function.')
     parser.add_argument('--bootstrap', action='store_true',
                         help='whether to bootstrap the data. ')
+    parser.add_argument('--zero_abs_tol', type=float, default=1e-15,
+                        help='whether to bootstrap the data. ')
     parser.add_argument('cache_dir', type=str, 
                         help='directory holding the cache files. ')
     parser.add_argument('n_components', type=int, 
@@ -43,6 +45,18 @@ if __name__ == '__main__':
             arr[:,i] = curr_arr[:,i]
 
     N, D = arr.shape
+
+    # hack: fill zero rows with small values. better idea?
+    n_zero_rows = 0
+    zero_row = [args.zero_abs_tol]*D
+    for i in range(N):
+        if np.sum(arr[i,:]) <= 0:
+            n_zero_rows += 1
+            arr[i,:] = zero_row
+    if n_zero_rows:
+        print '  WARNING: found {0} zero rows. '.format(n_zero_rows),
+        print 'filling these rows using {0}. '.format(args.zero_abs_tol)
+
     if args.bootstrap:
         arr = arr[np.random.choice(N, N)]
 
