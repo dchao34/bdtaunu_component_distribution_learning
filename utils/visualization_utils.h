@@ -16,6 +16,17 @@ std::vector<PointT> read_2dpoints(const std::string &fname);
 template<typename PointT>
 bool ReverseExactLexicoLess(const PointT &lhs, const PointT &rhs);
 
+
+// generate a 1-dimensional grid of points. 
+template <typename PointT>
+void generate_1dgrid(std::vector<PointT> &grid, 
+                     double start_x, double end_x, int steps_x);
+
+// write 1-dimensional point values 
+template<typename PointT>
+void write_1dpoint_values(std::ostream &os, std::vector<PointT> points);
+
+
 // generate a 2-dimensional grid of points. 
 template <typename PointT>
 void generate_2dgrid(std::vector<PointT> &grid, 
