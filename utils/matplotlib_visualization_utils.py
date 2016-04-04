@@ -25,6 +25,55 @@ def plot_data1d(data1d_fname, ax=None, xlim=None, linestyle='-', marker=None,
     else:
         ax.set_xlabel(r'$X_1$', fontsize=axis_fontsize)
 
+
+# plot 1d data histrogram using evenly sized bins. 
+def plot_data1d_histogram(sample, bins=20, weights=None, normed=False, xlim=None,
+                          ax=None, marker='.', color='k', linestyle='None', 
+                          title=None, xlabel=None, axis_fontsize=20, tick_labelsize=16):
+    
+    if ax is None: ax = plt.gca()
+    
+    # produce the unnormalized histrogram and assign plot coordinates
+    y, edges = np.histogram(sample, bins)
+    x = (edges[:-1]+edges[1:])*0.5
+    
+    
+    # compute error bar
+    y_err = np.sqrt(y)
+    
+    # if normed is requested, then convert the output into a density
+    if normed:
+        
+        # compute average bin width. perhaps overkill, but no better idea
+        bw = np.sum(edges[1:]-edges[:-1])/len(edges[:-1])
+        
+        # compute density error bar: assume bins are independent and Poisson
+        s = np.sum(y)
+        y_err = np.sqrt(
+            y / (bw*bw*s*s) - y*y / (bw*bw*s*s*s) 
+        )
+        
+        # compute density: density = count / total / binwidth
+        y = y / (bw*s)
+    
+    
+    # produce the plot
+    ax.errorbar(x,y,yerr=y_err,linestyle=linestyle,marker=marker,color=color)
+    if xlim: ax.set_xlim(xlim)
+
+    # customize axis labels
+    ax.tick_params(axis='both', which='major', labelsize=tick_labelsize)
+    if title:
+        ax.set_title(title, fontsize=axis_fontsize)
+
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=axis_fontsize)
+    else:
+        ax.set_xlabel(r'$X_1$', fontsize=axis_fontsize)
+    
+    return ax
+
+
 def plot_data2d(data2d_fname, ax=None, xlim=None, ylim=None,
                 title=None, axis_fontsize=20, tick_labelsize=16):
 
