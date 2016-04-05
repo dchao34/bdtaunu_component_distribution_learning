@@ -18,4 +18,8 @@ template<>
 std::vector<double> 
 tokenize<double>(const std::string &line, std::string delims);
 
+template<> 
+std::vector<int> 
+tokenize<int>(const std::string &line, std::string delims);
+
 #endif

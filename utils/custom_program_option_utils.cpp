@@ -7,6 +7,14 @@
 using namespace std;
 
 template<>
+std::vector<int> tokenize<int>(const string &line, string delims) {
+  vector<string> string_result = tokenize<string>(line, delims);
+  vector<int> result;
+  for (auto &s : string_result) { result.push_back(std::stoi(s)); }
+  return result;
+}
+
+template<>
 std::vector<double> tokenize<double>(const string &line, string delims) {
   vector<string> string_result = tokenize<string>(line, delims);
   vector<double> result;
