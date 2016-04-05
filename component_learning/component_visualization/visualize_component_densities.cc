@@ -65,33 +65,33 @@ int main(int argc, char **argv) {
         ("gpu_block_size", po::value<int>(), "gpu block size. ")
 
         ("input_data_dir", po::value<std::string>(), "directory to the input data. ")
-        ("input_component_fnames", po::value<std::string>(), "input paths to the components. ")
+        ("input_component_fname", po::value<std::string>(), "input paths to the components. ")
 
-        ("alphas", po::value<std::string>(), "sensitivity parameters. ")
-        ("pilot_bwxs", po::value<std::string>(), "pilot bandwidths in x. ")
-        ("pilot_bwys", po::value<std::string>(), "pilot bandwidths in y. ")
-        ("adapt_bwxs", po::value<std::string>(), "evaluation bandwidths in x. ")
-        ("adapt_bwys", po::value<std::string>(), "evaluation bandwidths in y. ")
+        ("alpha", po::value<double>(), "sensitivity parameters. ")
+        ("pilot_bwx", po::value<double>(), "pilot bandwidths in x. ")
+        ("pilot_bwy", po::value<double>(), "pilot bandwidths in y. ")
+        ("adapt_bwx", po::value<double>(), "evaluation bandwidths in x. ")
+        ("adapt_bwy", po::value<double>(), "evaluation bandwidths in y. ")
 
         ("output_data_dir", po::value<std::string>(), "directory to output visualization data. ")
-        ("output_scatter_fnames", po::value<std::string>(), "output paths to scatter plot visualization. ")
-        ("output_kde2d_fnames", po::value<std::string>(), "output paths to kde2d visualization. ")
-        ("output_kde1d_x_fnames", po::value<std::string>(), "output paths to kde1d x visualization. ")
-        ("output_kde1d_y_fnames", po::value<std::string>(), "output paths to kde1d y visualization. ")
+        ("output_scatter_fname", po::value<std::string>(), "output paths to scatter plot visualization. ")
+        ("output_kde2d_fname", po::value<std::string>(), "output paths to kde2d visualization. ")
+        ("output_kde1d_x_fname", po::value<std::string>(), "output paths to kde1d x visualization. ")
+        ("output_kde1d_y_fname", po::value<std::string>(), "output paths to kde1d y visualization. ")
 
-        ("start2d_x", po::value<std::string>(), "starting x coordinate for kde2d visualization. ")
-        ("end2d_x", po::value<std::string>(), "starting x coordinate for kde2d visualization. ")
-        ("steps2d_x", po::value<std::string>(), "number of steps to evaluate in x for kde2d visualization. ")
-        ("start2d_y", po::value<std::string>(), "starting y coordinate for kde2d visualization. ")
-        ("end2d_y", po::value<std::string>(), "starting y coordinate for kde2d visualization. ")
-        ("steps2d_y", po::value<std::string>(), "number of steps to evaluate in y for kde2d visualization. ")
+        ("start2d_x", po::value<double>(), "starting x coordinate for kde2d visualization. ")
+        ("end2d_x", po::value<double>(), "starting x coordinate for kde2d visualization. ")
+        ("steps2d_x", po::value<int>(), "number of steps to evaluate in x for kde2d visualization. ")
+        ("start2d_y", po::value<double>(), "starting y coordinate for kde2d visualization. ")
+        ("end2d_y", po::value<double>(), "starting y coordinate for kde2d visualization. ")
+        ("steps2d_y", po::value<int>(), "number of steps to evaluate in y for kde2d visualization. ")
 
-        ("start1d_x", po::value<std::string>(), "starting x coordinate for kde1d visualization. ")
-        ("end1d_x", po::value<std::string>(), "starting x coordinate for kde1d visualization. ")
-        ("steps1d_x", po::value<std::string>(), "number of steps to evaluate in x for kde1d visualization. ")
-        ("start1d_y", po::value<std::string>(), "starting y coordinate for kde1d visualization. ")
-        ("end1d_y", po::value<std::string>(), "starting y coordinate for kde1d visualization. ")
-        ("steps1d_y", po::value<std::string>(), "number of steps to evaluate in y for kde1d visualization. ")
+        ("start1d_x", po::value<double>(), "starting x coordinate for kde1d visualization. ")
+        ("end1d_x", po::value<double>(), "starting x coordinate for kde1d visualization. ")
+        ("steps1d_x", po::value<int>(), "number of steps to evaluate in x for kde1d visualization. ")
+        ("start1d_y", po::value<double>(), "starting y coordinate for kde1d visualization. ")
+        ("end1d_y", po::value<double>(), "starting y coordinate for kde1d visualization. ")
+        ("steps1d_y", po::value<int>(), "number of steps to evaluate in y for kde1d visualization. ")
 
     ;
 
@@ -195,239 +195,174 @@ void evaluate(const po::variables_map &vm) {
 
   std::cout << "+ configuring kde parameters. \n" << std::endl;
 
-  // read in I/O paths
+  // read and configure I/O paths
   std::string input_data_dir = vm["input_data_dir"].as<std::string>();
   std::string output_data_dir = vm["output_data_dir"].as<std::string>();
-  std::vector<std::string> input_component_fnames = 
-    tokenize<std::string>(vm["input_component_fnames"].as<std::string>());
-  std::vector<std::string> output_scatter_fnames = 
-    tokenize<std::string>(vm["output_scatter_fnames"].as<std::string>());
-  std::vector<std::string> output_kde2d_fnames = 
-    tokenize<std::string>(vm["output_kde2d_fnames"].as<std::string>());
-  std::vector<std::string> output_kde1d_x_fnames = 
-    tokenize<std::string>(vm["output_kde1d_x_fnames"].as<std::string>());
-  std::vector<std::string> output_kde1d_y_fnames = 
-    tokenize<std::string>(vm["output_kde1d_y_fnames"].as<std::string>());
+  std::string input_component_fname = vm["input_component_fname"].as<std::string>();
+  std::string output_scatter_fname = vm["output_scatter_fname"].as<std::string>();
+  std::string output_kde2d_fname = vm["output_kde2d_fname"].as<std::string>();
+  std::string output_kde1d_x_fname = vm["output_kde1d_x_fname"].as<std::string>();
+  std::string output_kde1d_y_fname = vm["output_kde1d_y_fname"].as<std::string>();
+
+  if (!input_data_dir.empty()) { 
+    input_component_fname = input_data_dir + "/" + input_component_fname;
+  }
+
+  if (!output_data_dir.empty()) { 
+    output_scatter_fname = output_data_dir + "/" + output_scatter_fname;
+    output_kde2d_fname = output_data_dir + "/" + output_kde2d_fname;
+    output_kde1d_x_fname = output_data_dir + "/" + output_kde1d_x_fname;
+    output_kde1d_y_fname = output_data_dir + "/" + output_kde1d_y_fname;
+  }
 
   // read in kde component configurations
-  std::vector<double> alphas = 
-    tokenize<double>(vm["alphas"].as<std::string>());
-  std::vector<double> pilot_bwxs = 
-    tokenize<double>(vm["pilot_bwxs"].as<std::string>());
-  std::vector<double> pilot_bwys = 
-    tokenize<double>(vm["pilot_bwys"].as<std::string>());
-  std::vector<double> adapt_bwxs = 
-    tokenize<double>(vm["adapt_bwxs"].as<std::string>());
-  std::vector<double> adapt_bwys = 
-    tokenize<double>(vm["adapt_bwys"].as<std::string>());
+  double alpha = vm["alpha"].as<double>();
+  double pilot_bwx = vm["pilot_bwx"].as<double>();
+  double pilot_bwy = vm["pilot_bwy"].as<double>();
+  double adapt_bwx = vm["adapt_bwx"].as<double>();
+  double adapt_bwy = vm["adapt_bwy"].as<double>();
 
   // read in grid coordinates
-  std::vector<double> start2d_x = 
-    tokenize<double>(vm["start2d_x"].as<std::string>());
-  std::vector<double> end2d_x = 
-    tokenize<double>(vm["end2d_x"].as<std::string>());
-  std::vector<int> steps2d_x = 
-    tokenize<int>(vm["steps2d_x"].as<std::string>());
-  std::vector<double> start2d_y = 
-    tokenize<double>(vm["start2d_y"].as<std::string>());
-  std::vector<double> end2d_y = 
-    tokenize<double>(vm["end2d_y"].as<std::string>());
-  std::vector<int> steps2d_y = 
-    tokenize<int>(vm["steps2d_y"].as<std::string>());
+  double start2d_x = vm["start2d_x"].as<double>();
+  double end2d_x = vm["end2d_x"].as<double>();
+  int steps2d_x = vm["steps2d_x"].as<int>();
+  double start2d_y = vm["start2d_y"].as<double>();
+  double end2d_y = vm["end2d_y"].as<double>();
+  int steps2d_y = vm["steps2d_y"].as<int>();
 
-  std::vector<double> start1d_x = 
-    tokenize<double>(vm["start1d_x"].as<std::string>());
-  std::vector<double> end1d_x = 
-    tokenize<double>(vm["end1d_x"].as<std::string>());
-  std::vector<int> steps1d_x = 
-    tokenize<int>(vm["steps1d_x"].as<std::string>());
-  std::vector<double> start1d_y = 
-    tokenize<double>(vm["start1d_y"].as<std::string>());
-  std::vector<double> end1d_y = 
-    tokenize<double>(vm["end1d_y"].as<std::string>());
-  std::vector<int> steps1d_y = 
-    tokenize<int>(vm["steps1d_y"].as<std::string>());
-
-  // checking argument consistency 
-  int n_components = input_component_fnames.size();
-
-  for (int i = 0; i < n_components; ++i) {
-    if (!input_data_dir.empty()) { 
-      input_component_fnames[i] = input_data_dir + "/" + input_component_fnames[i];
-    }
-
-    if (!output_data_dir.empty()) { 
-      output_scatter_fnames[i] = output_data_dir + "/" + output_scatter_fnames[i];
-      output_kde2d_fnames[i] = output_data_dir + "/" + output_kde2d_fnames[i];
-      output_kde1d_x_fnames[i] = output_data_dir + "/" + output_kde1d_x_fnames[i];
-      output_kde1d_y_fnames[i] = output_data_dir + "/" + output_kde1d_y_fnames[i];
-    }
-  }
-
-  if (
-      (output_scatter_fnames.size() != n_components) ||
-      (output_kde2d_fnames.size() != n_components) ||
-      (output_kde1d_x_fnames.size() != n_components) ||
-      (output_kde1d_y_fnames.size() != n_components) ||
-      (alphas.size() != n_components) ||
-      (pilot_bwxs.size() != n_components) ||
-      (pilot_bwys.size() != n_components) ||
-      (adapt_bwxs.size() != n_components) ||
-      (adapt_bwys.size() != n_components) ||
-      (start2d_x.size() != n_components) ||
-      (end2d_x.size() != n_components) ||
-      (steps2d_x.size() != n_components) ||
-      (start2d_y.size() != n_components) ||
-      (end2d_y.size() != n_components) ||
-      (steps2d_y.size() != n_components) ||
-      (start1d_x.size() != n_components) ||
-      (end1d_x.size() != n_components) ||
-      (steps1d_x.size() != n_components) ||
-      (start1d_y.size() != n_components) ||
-      (end1d_y.size() != n_components) ||
-      (steps1d_y.size() != n_components)
-     ) {
-    throw std::invalid_argument(
-        "evaluate(): must have same number of " 
-        "adaptive kernel parameters as there are kernels. ");
-  }
+  double start1d_x = vm["start1d_x"].as<double>();
+  double end1d_x = vm["end1d_x"].as<double>();
+  int steps1d_x = vm["steps1d_x"].as<int>();
+  double start1d_y = vm["start1d_y"].as<double>();
+  double end1d_y = vm["end1d_y"].as<double>();
+  int steps1d_y = vm["steps1d_y"].as<int>();
 
   // print configuration parameters
-  std::cout << "  will perform evaluation for the following components: \n" << std::endl;
-  for (int i = 0; i < n_components; ++i) {
-    std::cout << "  component " << i << ":" << std::endl;
-    std::cout << std::endl;
-    std::cout << "    input file name: " << input_component_fnames[i] << std::endl;
-    std::cout << "    output scatter file name: " << output_scatter_fnames[i] << std::endl;
-    std::cout << "    output kde2d file name: " << output_kde2d_fnames[i] << std::endl;
-    std::cout << "    output kde1d x file name: " << output_kde1d_x_fnames[i] << std::endl;
-    std::cout << "    output kde1d y file name: " << output_kde1d_y_fnames[i] << std::endl;
-    std::cout << std::endl;
-    std::cout << "    alpha: " << alphas[i] << std::endl;
-    std::cout << "    pilot bandwidths (x, y): " << pilot_bwxs[i] << ", " << pilot_bwys[i] << std::endl;
-    std::cout << "    adaptive bandwidths (x, y): " << adapt_bwxs[i] << ", " << adapt_bwys[i] << std::endl;
-    std::cout << std::endl;
-    std::cout << "    start2d_x, end2d_x, steps2d_x: ";
-    std::cout << start2d_x[i] << " " << end2d_x[i] << " " << steps2d_x[i] << std::endl;
-    std::cout << "    start2d_y, end2d_y, steps2d_y: ";
-    std::cout << start2d_y[i] << " " << end2d_y[i] << " " << steps2d_y[i] << std::endl;
-    std::cout << "    start1d_x, end1d_x, steps1d_x: ";
-    std::cout << start1d_x[i] << " " << end1d_x[i] << " " << steps1d_x[i] << std::endl;
-    std::cout << "    start1d_y, end1d_y, steps1d_y: ";
-    std::cout << start1d_y[i] << " " << end1d_y[i] << " " << steps1d_y[i] << std::endl;
-    std::cout << std::endl;
-  }
+  std::cout << "  input file name: " << input_component_fname << std::endl;
+  std::cout << "  output scatter file name: " << output_scatter_fname << std::endl;
+  std::cout << "  output kde2d file name: " << output_kde2d_fname << std::endl;
+  std::cout << "  output kde1d x file name: " << output_kde1d_x_fname << std::endl;
+  std::cout << "  output kde1d y file name: " << output_kde1d_y_fname << std::endl;
+  std::cout << std::endl;
+  std::cout << "  alpha: " << alpha << std::endl;
+  std::cout << "  pilot bandwidths (x, y): " << pilot_bwx << ", " << pilot_bwy << std::endl;
+  std::cout << "  adaptive bandwidths (x, y): " << adapt_bwx << ", " << adapt_bwy << std::endl;
+  std::cout << std::endl;
+  std::cout << "  start2d_x, end2d_x, steps2d_x: ";
+  std::cout << start2d_x << " " << end2d_x << " " << steps2d_x << std::endl;
+  std::cout << "  start2d_y, end2d_y, steps2d_y: ";
+  std::cout << start2d_y << " " << end2d_y << " " << steps2d_y << std::endl;
+  std::cout << "  start1d_x, end1d_x, steps1d_x: ";
+  std::cout << start1d_x << " " << end1d_x << " " << steps1d_x << std::endl;
+  std::cout << "  start1d_y, end1d_y, steps1d_y: ";
+  std::cout << start1d_y << " " << end1d_y << " " << steps1d_y << std::endl;
+  std::cout << std::endl;
+
 
   // 3. evaluate for visualization
 
   std::cout << "+ main evaluation. \n" << std::endl;
 
-  for (int i = 0; i < n_components; ++i) {
+  // read in sample points
+  std::vector<Point2d> reference_points 
+    = read_2dpoints<Point2d>(input_component_fname);
 
-    std::cout << "  evaluating component " << i << ":\n" << std::endl;
+  std::cout << "  number of sample points: " << reference_points.size() << std::endl;
+  std::cout << "  number of 2d grid points: " << steps2d_x * steps2d_y << std::endl;
+  std::cout << "  number of 1d grid points (x, y): ";
+  std::cout << steps1d_x << ", " << steps1d_y << "\n" << std::endl;
 
-    // read in sample points
-    std::vector<Point2d> reference_points 
-      = read_2dpoints<Point2d>(input_component_fnames[i]);
-
-    std::cout << "    number of sample points: " << reference_points.size() << std::endl;
-    std::cout << "    number of 2d grid points: " << steps2d_x[i] * steps2d_y[i] << std::endl;
-    std::cout << "    number of 1d grid points (x, y): ";
-    std::cout << steps1d_x[i] << ", " << steps1d_y[i] << "\n" << std::endl;
-
-    // construct the 2d kde
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    constructing 2d kde";
-    start = std::chrono::high_resolution_clock::now();
-    KernelDensityType kde = 
-      construct_kernel_density(reference_points, 
-                               alphas[i], 
-                               pilot_bwxs[i], pilot_bwys[i], 
-                               adapt_bwxs[i], adapt_bwys[i],
-                               rel_tol, abs_tol, max_leaf_size, gpu_block_size);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    // evaluate 2d kde
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    evaluating 2d kde";
-    std::vector<Point2d> grid2d;
-    generate_2dgrid(grid2d, start2d_x[i], end2d_x[i], steps2d_x[i],
-                            start2d_y[i], end2d_y[i], steps2d_y[i]);
-
-    start = std::chrono::high_resolution_clock::now();
-    kde.eval(grid2d, rel_tol, abs_tol, max_leaf_size);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    // evaluate marginal 1d kde: x
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    constructing marginal kde in x";
-    std::vector<Point1d> grid1d_x;
-    generate_1dgrid(grid1d_x, start1d_x[i], end1d_x[i], steps1d_x[i]);
-
-    start = std::chrono::high_resolution_clock::now();
-    MarginalDensityType kde_x = 
-      bbrcit::MarginalDensityAssociator<KernelDensityType>::marginal_density_x(kde);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    evaluating marginal kde in x";
-    start = std::chrono::high_resolution_clock::now();
-    kde_x.eval(grid1d_x, rel_tol, abs_tol, max_leaf_size);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    // evaluate marginal 1d kde: y
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    constructing marginal kde in y";
-    std::vector<Point1d> grid1d_y;
-    generate_1dgrid(grid1d_y, start1d_y[i], end1d_y[i], steps1d_y[i]);
-
-    start = std::chrono::high_resolution_clock::now();
-    MarginalDensityType kde_y = 
-      bbrcit::MarginalDensityAssociator<KernelDensityType>::marginal_density_y(kde);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    std::cout << std::left << std::setfill('.') << std::setw(40) << "    evaluating marginal kde in y";
-    start = std::chrono::high_resolution_clock::now();
-    kde_y.eval(grid1d_y, rel_tol, abs_tol, max_leaf_size);
-    end = std::chrono::high_resolution_clock::now();
-    elapsed = end - start;
-    std::cout << " " << elapsed.count() << " s. " << std::endl;
-
-    std::cout << std::endl;
-
-
-    // write output
-    std::ofstream fout;
-    fout.open(output_scatter_fnames[i]);
-    write_2dscatter_data(fout, reference_points);
-    fout.close();
-
-    fout.open(output_kde2d_fnames[i]);
-    write_2dgrid_values(fout, grid2d, 
-                        start2d_x[i], end2d_x[i], steps2d_x[i],
-                        start2d_y[i], end2d_y[i], steps2d_y[i]);
-    fout.close();
-
-    fout.open(output_kde1d_x_fnames[i]);
-    write_1dpoint_values(fout, grid1d_x);
-    fout.close();
-
-    fout.open(output_kde1d_y_fnames[i]);
-    write_1dpoint_values(fout, grid1d_y);
-    fout.close();
-
-
-  }
-
-  std::cout << "+ done. \n" << std::endl;
-  end_total = std::chrono::high_resolution_clock::now();
+  // construct the 2d kde
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  constructing 2d kde";
+  start = std::chrono::high_resolution_clock::now();
+  KernelDensityType kde = 
+    construct_kernel_density(reference_points, 
+                             alpha, 
+                             pilot_bwx, pilot_bwy, 
+                             adapt_bwx, adapt_bwy,
+                             rel_tol, abs_tol, max_leaf_size, gpu_block_size);
+  end = std::chrono::high_resolution_clock::now();
   elapsed = end - start;
-  std::cout << "  total running time: " << elapsed.count() << " s. \n" << std::endl;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  // evaluate 2d kde
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  evaluating 2d kde";
+  std::vector<Point2d> grid2d;
+  generate_2dgrid(grid2d, start2d_x, end2d_x, steps2d_x,
+                          start2d_y, end2d_y, steps2d_y);
+
+  start = std::chrono::high_resolution_clock::now();
+  kde.eval(grid2d, rel_tol, abs_tol, max_leaf_size);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  // evaluate marginal 1d kde: x
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  constructing marginal kde in x";
+  std::vector<Point1d> grid1d_x;
+  generate_1dgrid(grid1d_x, start1d_x, end1d_x, steps1d_x);
+
+  start = std::chrono::high_resolution_clock::now();
+  MarginalDensityType kde_x = 
+    bbrcit::MarginalDensityAssociator<KernelDensityType>::marginal_density_x(kde);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  evaluating marginal kde in x";
+  start = std::chrono::high_resolution_clock::now();
+  kde_x.eval(grid1d_x, rel_tol, abs_tol, max_leaf_size);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  // evaluate marginal 1d kde: y
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  constructing marginal kde in y";
+  std::vector<Point1d> grid1d_y;
+  generate_1dgrid(grid1d_y, start1d_y, end1d_y, steps1d_y);
+
+  start = std::chrono::high_resolution_clock::now();
+  MarginalDensityType kde_y = 
+    bbrcit::MarginalDensityAssociator<KernelDensityType>::marginal_density_y(kde);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  std::cout << std::left << std::setfill('.') << std::setw(40) << "  evaluating marginal kde in y";
+  start = std::chrono::high_resolution_clock::now();
+  kde_y.eval(grid1d_y, rel_tol, abs_tol, max_leaf_size);
+  end = std::chrono::high_resolution_clock::now();
+  elapsed = end - start;
+  std::cout << " " << elapsed.count() << " s. " << std::endl;
+
+  std::cout << std::endl;
+
+
+  // write output
+  std::ofstream fout;
+  fout.open(output_scatter_fname);
+  write_2dscatter_data(fout, reference_points);
+  fout.close();
+
+  fout.open(output_kde2d_fname);
+  write_2dgrid_values(fout, grid2d, 
+                      start2d_x, end2d_x, steps2d_x,
+                      start2d_y, end2d_y, steps2d_y);
+  fout.close();
+
+  fout.open(output_kde1d_x_fname);
+  write_1dpoint_values(fout, grid1d_x);
+  fout.close();
+
+  fout.open(output_kde1d_y_fname);
+  write_1dpoint_values(fout, grid1d_y);
+  fout.close();
+
+
+  std::cout << "+ done. ";
+  end_total = std::chrono::high_resolution_clock::now();
+  elapsed = end_total - start_total;
+  std::cout << "total running time: " << elapsed.count() << " s. \n" << std::endl;
 
 }
 
