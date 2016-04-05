@@ -1,6 +1,7 @@
 #include <random>
 #include <string>
 #include <fstream>
+#include <iomanip>
 #include <cstdlib>
 
 #include <boost/program_options.hpp>
@@ -129,6 +130,7 @@ void prepare_data_format(const po::variables_map &vm) {
   // main procedure
   NumericCsvReader reader(in_fname);
   std::ofstream fout(out_fname);
+  fout << std::setprecision(12) << std::fixed;
 
   double dither_x = 0.0, dither_y = 0.0;
   while (reader.getline()) {
