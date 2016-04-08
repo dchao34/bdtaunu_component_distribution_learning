@@ -1,3 +1,4 @@
 .d
 data
 *.pyc
+custom_python_utilities/
