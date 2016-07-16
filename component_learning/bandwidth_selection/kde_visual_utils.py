@@ -51,7 +51,9 @@ def plot_contour2d(kde2d_fname, ax=None, colorbar=True,
                    vmin=None, vmax=None,
                    nlevels=10, nlevels_f=50,
                    linewidths=0.4,
-                   title=None, axis_fontsize=20, tick_labelsize=16, 
+                   title=None,
+                   xlabel=None, ylabel=None,
+                   axis_fontsize=20, tick_labelsize=16,
                    cmap=plt.cm.Blues, contour_fmt='%1.2f'):
 
     # read in the specialized file generated from kde_scan
@@ -82,5 +84,15 @@ def plot_contour2d(kde2d_fname, ax=None, colorbar=True,
     ax.tick_params(axis='both', which='major', labelsize=tick_labelsize)
     if title:
         ax.set_title(title, fontsize=axis_fontsize)
+
+    if xlabel:
+        ax.set_xlabel(xlabel, fontsize=axis_fontsize)
+    else:
+        ax.set_xlabel(r'$X_1$', fontsize=axis_fontsize)
+
+    if ylabel:
+        ax.set_ylabel(ylabel, fontsize=axis_fontsize)
+    else:
+        ax.set_ylabel(r'$X_2$', fontsize=axis_fontsize)
 
     return
